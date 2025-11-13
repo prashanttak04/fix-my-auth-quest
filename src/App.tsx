@@ -1,33 +1,41 @@
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import CitizenDashboard from "./pages/CitizenDashboard";
-import EmployeeDashboard from "./pages/EmployeeDashboard";
-import NotFound from "./pages/NotFound";
+// src/App.tsx (or src/main layout component)
+import React from 'react';
+import { useAppUser } from './hooks/useAppUser';
+import CitizenDashboard from './pages/CitizenDashboard';
+import EmployeeDashboard from './pages/EmployeeDashboard';
+import SignInPage from './pages/SignInPage';
 
-const queryClient = new QueryClient();
+export default function App() {
+  const { appUser, loading } = useAppUser();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/citizen/dashboard" element={<CitizenDashboard />} />
-          <Route path="/employee/dashboard" element={<EmployeeDashboard />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div>Loading...</div>
+      </div>
+    );
+  }
 
-export default App;
+  // not signed in
+  if (!appUser) {
+    return <SignInPage />;
+  }
+
+  // if profile exists but specialization rows missing, show a short onboarding CTA
+  if (!appUser.isEmployee && !appUser.citizen) {
+    return (
+      <div className="p-8">
+        <h2>Complete your profile</h2>
+        <p>We couldn't find your citizen profile. Please complete it to use citizen features.</p>
+        <button onClick={() => window.location.assign('/profile')}>Complete Profile</button>
+      </div>
+    );
+  }
+
+  // render appropriate dashboard
+  if (appUser.isEmployee) {
+    return <EmployeeDashboard user={appUser} />;
+  } else {
+    return <CitizenDashboard user={appUser} />;
+  }
+}
